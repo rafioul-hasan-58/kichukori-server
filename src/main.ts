@@ -8,6 +8,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CustomLogger } from './core/logger/logger.service';
 import { API_DOCS_PATH, GLOBAL_PREFIX } from './core/constants';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const logger = new CustomLogger();
@@ -17,6 +18,7 @@ async function bootstrap() {
       logger,
     });
 
+    app.use(cookieParser());
     app.setGlobalPrefix(GLOBAL_PREFIX);
 
     // Enable URI versioning (e.g. /api/v1/auth/login)

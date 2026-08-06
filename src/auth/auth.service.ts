@@ -8,12 +8,16 @@ import { UsersRepository } from '../modules/users/users.repository';
 import { RegisterDto } from './dto/register.dto';
 import bcrypt from 'bcryptjs';
 import { LoginDto } from './dto/login.dto';
+import { ConfigService } from '@nestjs/config';
+import { EnvConfig } from '../config/env.schema';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService<EnvConfig, true>,
   ) {}
 
   async register(payload: RegisterDto) {
@@ -43,6 +47,25 @@ export class AuthService {
     };
   }
 
+  private async generateTokens(user: User) {
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      role: user.activeRole as 'BUYER' | 'SELLER' | 'ADMIN',
+    };
+
+    const accessToken = await this.jwtService.signAsync(tokenPayload);
+
+    const refreshToken = await this.jwtService.signAsync(tokenPayload, {
+      secret: this.configService.get('JWT_REFRESH_SECRET', { infer: true }),
+      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', {
+        infer: true,
+      }),
+    });
+
+    return { accessToken, refreshToken };
+  }
+
   async login(payload: LoginDto) {
     const user = await this.usersRepository.findByEmail(payload.email);
 
@@ -55,14 +78,29 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password!');
     }
 
-    const tokenPayload = {
-      id: user.id,
-      email: user.email,
-      activeRole: user.activeRole,
-    };
-    const accessToken = this.jwtService.sign(tokenPayload);
-    return {
-      accessToken,
-    };
+    return this.generateTokens(user);
+  }
+
+  async refreshTokens(token: string) {
+    try {
+      const secret = this.configService.get('JWT_REFRESH_SECRET', {
+        infer: true,
+      });
+      const payload = await this.jwtService.verifyAsync<{
+        id: string;
+        email: string;
+      }>(token, {
+        secret,
+      });
+
+      const user = await this.usersRepository.findById(payload.id);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      return this.generateTokens(user);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
   }
 }

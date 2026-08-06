@@ -1,8 +1,18 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import type { Request, Response } from 'express';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -27,11 +37,71 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({ status: 200, description: 'Token' })
   @ApiResponse({ status: 401, description: 'Invalid email or password' })
-  async login(@Body() dto: LoginDto) {
-    const data = await this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { accessToken, refreshToken } = await this.authService.login(dto);
+
+    response.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
     return {
       message: 'Login successfull!',
-      data,
+      data: { accessToken },
+    };
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access and refresh tokens using cookies' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or missing refresh token.',
+  })
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const cookies = request.cookies as Record<string, string> | undefined;
+    const refreshToken = cookies?.['refreshToken'];
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found');
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } =
+      await this.authService.refreshTokens(refreshToken);
+
+    response.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    return {
+      message: 'Token refreshed successfully!',
+      data: { accessToken },
+    };
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout and clear refresh token cookie' })
+  @ApiResponse({ status: 200, description: 'Logout successful.' })
+  logout(@Res({ passthrough: true }) response: Response) {
+    response.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+    return {
+      message: 'Logout successful!',
     };
   }
 }
