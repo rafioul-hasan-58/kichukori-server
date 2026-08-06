@@ -1,11 +1,31 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
+import { Role } from '@prisma/client';
 
 export class RegisterDto {
-  @ApiProperty({ description: 'The name of the user', example: 'John Doe' })
+  @ApiProperty({
+    description: 'The first name of the user',
+    example: 'John',
+    required: false,
+  })
   @IsString()
-  @MinLength(2, { message: 'Name must be at least 2 characters' })
-  name: string;
+  @IsOptional()
+  firstName?: string;
+
+  @ApiProperty({
+    description: 'The last name of the user',
+    example: 'Doe',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  lastName?: string;
 
   @ApiProperty({
     description: 'The email address of the user',
@@ -21,4 +41,14 @@ export class RegisterDto {
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters' })
   password: string;
+
+  @ApiProperty({
+    description: 'The active role of the user (BUYER or SELLER)',
+    enum: Role,
+    example: Role.BUYER,
+  })
+  @IsEnum(Role, {
+    message: 'activeRole must be a valid role (BUYER, SELLER, ADMIN)',
+  })
+  activeRole: Role;
 }

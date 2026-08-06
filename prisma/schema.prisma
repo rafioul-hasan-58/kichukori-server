@@ -14,16 +14,55 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  firstName       String?
+  lastName        String?
+  email           String  @unique
+  password        String
+  activeRole      Role    @default(BUYER)
+  roles           Role[]  @default([BUYER])
+  isEmailVerified Boolean @default(false)
+  isAdult         Boolean @default(true)
+  expertiseType   String?
+  latitude        Float?
+  longitude       Float?
+
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  // relations
+  verification VerificationProfile?
+}
+
+model VerificationProfile {
+  id                 String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String             @unique @db.ObjectId
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationStatus VerificationStatus @default(PENDING)
+  rejectionReason    String?
+  // primary document
+  primaryDocType     DocumentType
+  primaryDocNumber   String
+  primaryDocUrl      String
+  // under 18
+  parentNidNumber    String?
+  parentNidUrl       String?
+  verifiedAt         DateTime?
+  updatedAt          DateTime           @updatedAt
+}
+
+enum DocumentType {
+  NID
+  BIRTH_CERTIFICATE
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum Role {
-  USER
+  BUYER
+  SELLER
   ADMIN
 }

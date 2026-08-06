@@ -25,15 +25,21 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(payload.password, 12);
 
     const user = await this.usersRepository.create({
-      name: payload.name,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
       email: payload.email,
       password: hashedPassword,
+      activeRole: payload.activeRole,
+      roles: [payload.activeRole],
     });
 
     return {
       id: user.id,
-      name: user.name,
+      firstName: user.firstName as string | null,
+      lastName: user.lastName as string | null,
       email: user.email,
+      activeRole: user.activeRole as 'BUYER' | 'SELLER' | 'ADMIN',
+      roles: user.roles as ('BUYER' | 'SELLER' | 'ADMIN')[],
     };
   }
 
@@ -52,7 +58,7 @@ export class AuthService {
     const tokenPayload = {
       id: user.id,
       email: user.email,
-      role: user.role,
+      activeRole: user.activeRole as 'BUYER' | 'SELLER' | 'ADMIN',
     };
     const accessToken = this.jwtService.sign(tokenPayload);
     return {
