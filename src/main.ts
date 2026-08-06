@@ -39,8 +39,8 @@ async function bootstrap() {
     const port = configService.get('PORT', { infer: true });
 
     const config = new DocumentBuilder()
-      .setTitle('NestJS Starter Pack API')
-      .setDescription('The starter pack API description')
+      .setTitle('Kichu Kori Server API')
+      .setDescription('The Kichu Kori server API description')
       .setVersion('1.0')
       .addBearerAuth()
       .build();

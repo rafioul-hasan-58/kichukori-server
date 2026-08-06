@@ -35,10 +35,10 @@ export class AuthService {
 
     return {
       id: user.id,
-      firstName: user.firstName as string | null,
-      lastName: user.lastName as string | null,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
-      activeRole: user.activeRole as 'BUYER' | 'SELLER' | 'ADMIN',
+      activeRole: user.activeRole,
       roles: user.roles as ('BUYER' | 'SELLER' | 'ADMIN')[],
     };
   }
@@ -58,7 +58,7 @@ export class AuthService {
     const tokenPayload = {
       id: user.id,
       email: user.email,
-      activeRole: user.activeRole as 'BUYER' | 'SELLER' | 'ADMIN',
+      activeRole: user.activeRole,
     };
     const accessToken = this.jwtService.sign(tokenPayload);
     return {
