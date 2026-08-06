@@ -12,6 +12,12 @@ export const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(8),
+  SMTP_HOST: z.string(),
+  SMTP_PORT: z.coerce.number().default(465),
+  SMTP_EMAIL: z.string().email(),
+  SMTP_PASS: z.string(),
+  SMTP_EMAIL_FROM: z.string().email(),
+  SMTP_NAME: z.string().default('KichuKori'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

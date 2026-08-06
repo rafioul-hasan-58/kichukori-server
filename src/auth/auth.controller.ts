@@ -12,6 +12,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import type { Request, Response } from 'express';
 
 @ApiTags('Authentication')
@@ -27,8 +28,32 @@ export class AuthController {
   async register(@Body() dto: RegisterDto) {
     const data = await this.authService.register(dto);
     return {
-      message: 'Registration successfull',
-      data,
+      message: data.message,
+      data: { email: data.email },
+    };
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email OTP and issue tokens' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully.' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired OTP.' })
+  async verifyOtp(
+    @Body() dto: VerifyOtpDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { accessToken, refreshToken } = await this.authService.verifyOtp(dto);
+
+    response.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    return {
+      message: 'Email verified successfully!',
+      data: { accessToken },
     };
   }
 

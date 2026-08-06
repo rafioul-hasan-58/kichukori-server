@@ -17,6 +17,10 @@ export interface JwtPayload {
   role: Role;
 }
 
+interface RequestWithUser extends Request {
+  user?: JwtPayload;
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -25,11 +29,11 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
 
     // 1. Authenticate (Verify JWT token)
     const payload = await this.authenticate(request);
-    request['user'] = payload;
+    request.user = payload;
 
     // 2. Authorize (Check role-based permissions)
     const isAuthorized = this.authorize(context, payload.role);

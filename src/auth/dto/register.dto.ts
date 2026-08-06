@@ -32,7 +32,7 @@ export class RegisterDto {
     example: 'john.doe@example.com',
   })
   @IsEmail({}, { message: 'Please enter a valid email address' })
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'Password of the user (minimum 6 characters)',
@@ -40,7 +40,7 @@ export class RegisterDto {
   })
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters' })
-  password: string;
+  password!: string;
 
   @ApiProperty({
     description: 'The active role of the user (BUYER or SELLER)',
@@ -50,5 +50,5 @@ export class RegisterDto {
   @IsEnum(Role, {
     message: 'activeRole must be a valid role (BUYER, SELLER, ADMIN)',
   })
-  activeRole: Role;
+  activeRole!: Role;
 }
