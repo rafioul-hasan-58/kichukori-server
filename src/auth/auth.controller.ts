@@ -7,12 +7,22 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { AuthGuard, JwtPayload } from '../common/guards/auth.guard';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import type { Request, Response } from 'express';
 
 @ApiTags('Authentication')
@@ -128,5 +138,46 @@ export class AuthController {
     return {
       message: 'Logout successful!',
     };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request password reset OTP' })
+  @ApiResponse({ status: 200, description: 'OTP sent successfully.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('verify-reset-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify password reset OTP and return a reset token',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP verified, reset token returned.',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired OTP.' })
+  async verifyResetOtp(@Body() dto: VerifyResetOtpDto) {
+    return this.authService.verifyResetOtp(dto);
+  }
+
+  @Post('reset-password')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using the reset token' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired reset token.' })
+  async resetPassword(
+    @Req() req: Record<string, unknown>,
+    @Body() dto: ResetPasswordDto,
+  ) {
+    const user = req.user as JwtPayload | undefined;
+    if (user?.purpose !== 'reset-password') {
+      throw new UnauthorizedException('Invalid token purpose');
+    }
+    return this.authService.resetPassword(user.id, dto.password);
   }
 }

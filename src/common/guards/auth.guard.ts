@@ -14,10 +14,11 @@ import { ROLES_KEY } from '../../core/constants';
 export interface JwtPayload {
   id: string;
   email: string;
-  role: Role;
+  activeRole: Role;
+  purpose?: string;
 }
 
-interface RequestWithUser extends Request {
+export interface RequestWithUser extends Request {
   user?: JwtPayload;
 }
 
@@ -36,7 +37,7 @@ export class AuthGuard implements CanActivate {
     request.user = payload;
 
     // 2. Authorize (Check role-based permissions)
-    const isAuthorized = this.authorize(context, payload.role);
+    const isAuthorized = this.authorize(context, payload.activeRole);
     if (!isAuthorized) {
       throw new ForbiddenException(
         'You do not have permission to access this resource',

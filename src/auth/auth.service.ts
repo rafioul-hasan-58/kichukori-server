@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -14,6 +15,8 @@ import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../modules/mail/mail.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
 
 @Injectable()
 export class AuthService {
@@ -180,5 +183,101 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+  }
+
+  async forgotPassword(payload: ForgotPasswordDto) {
+    const user = await this.usersRepository.findByEmail(payload.email);
+    if (!user) {
+      throw new NotFoundException('User with this email does not exist');
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    await this.prisma.otp.upsert({
+      where: { email: payload.email },
+      update: {
+        code: otpCode,
+        expiresAt,
+      },
+      create: {
+        email: payload.email,
+        code: otpCode,
+        expiresAt,
+      },
+    });
+
+    await this.mailService.sendPasswordResetOtp(payload.email, otpCode);
+
+    return {
+      message:
+        'Password reset OTP verification code sent to your email address.',
+      email: payload.email,
+    };
+  }
+
+  async verifyResetOtp(payload: VerifyResetOtpDto) {
+    const otpRecord = await this.prisma.otp.findUnique({
+      where: { email: payload.email },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException(
+        'No verification request found for this email',
+      );
+    }
+
+    if (otpRecord.code !== payload.otp) {
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      throw new UnauthorizedException('Verification code has expired');
+    }
+
+    const user = await this.usersRepository.findByEmail(payload.email);
+    if (!user) {
+      throw new NotFoundException('User with this email does not exist');
+    }
+
+    await this.prisma.otp.delete({
+      where: { email: payload.email },
+    });
+
+    const resetToken = await this.jwtService.signAsync(
+      {
+        id: user.id,
+        email: user.email,
+        activeRole: user.activeRole,
+        purpose: 'reset-password',
+      },
+      {
+        expiresIn: '10m',
+      },
+    );
+
+    return {
+      message: 'OTP verified successfully.',
+      resetToken,
+    };
+  }
+
+  async resetPassword(userId: string, password: string) {
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return {
+      message: 'Password reset successfully.',
+    };
   }
 }
