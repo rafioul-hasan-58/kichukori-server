@@ -4,7 +4,7 @@ import { IsEmail, IsString, Length, Matches } from 'class-validator';
 export class VerifyOtpDto {
   @ApiProperty({
     description: 'The email address of the user',
-    example: 'john.doe@example.com',
+    example: 'harry@gmail.com',
   })
   @IsEmail({}, { message: 'Please enter a valid email address' })
   email!: string;

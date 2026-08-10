@@ -11,7 +11,7 @@ import { Role } from '@prisma/client';
 export class RegisterDto {
   @ApiProperty({
     description: 'The first name of the user',
-    example: 'John',
+    example: 'Harry',
     required: false,
   })
   @IsString()
@@ -20,7 +20,7 @@ export class RegisterDto {
 
   @ApiProperty({
     description: 'The last name of the user',
-    example: 'Doe',
+    example: 'Kane',
     required: false,
   })
   @IsString()
@@ -29,14 +29,14 @@ export class RegisterDto {
 
   @ApiProperty({
     description: 'The email address of the user',
-    example: 'john.doe@example.com',
+    example: 'harry@gmail.com',
   })
   @IsEmail({}, { message: 'Please enter a valid email address' })
   email!: string;
 
   @ApiProperty({
     description: 'Password of the user (minimum 6 characters)',
-    example: 'securePassword123',
+    example: '12345678',
   })
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters' })
@@ -46,9 +46,12 @@ export class RegisterDto {
     description: 'The active role of the user (BUYER or SELLER)',
     enum: Role,
     example: Role.BUYER,
+    required: false,
+    default: Role.BUYER,
   })
   @IsEnum(Role, {
     message: 'activeRole must be a valid role (BUYER, SELLER, ADMIN)',
   })
-  activeRole!: Role;
+  @IsOptional()
+  activeRole: Role = Role.BUYER;
 }
