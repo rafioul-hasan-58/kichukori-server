@@ -6,8 +6,6 @@ npm-debug.log
 .gitignore
 .prettierrc
 eslint.config.mjs
-nest-cli.json
-tsconfig.json
-tsconfig.build.json
 README.md
 LICENSE
+
