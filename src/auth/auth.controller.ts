@@ -23,6 +23,7 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import type { Request, Response } from 'express';
 
 @ApiTags('Authentication')
@@ -179,5 +180,37 @@ export class AuthController {
       throw new UnauthorizedException('Invalid token purpose');
     }
     return this.authService.resetPassword(user.id, dto.password);
+  }
+
+  @Post('google-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Authenticate using a Google ID token (registers user if not exists and activeRole is provided)',
+  })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({
+    status: 400,
+    description: 'Active role is required for registration',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid Google token' })
+  async googleLogin(
+    @Body() dto: GoogleLoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { accessToken, refreshToken } =
+      await this.authService.authenticateGoogleToken(dto.token, dto.activeRole);
+
+    response.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    return {
+      message: 'Google login successful!',
+      data: { accessToken },
+    };
   }
 }

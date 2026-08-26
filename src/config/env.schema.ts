@@ -18,6 +18,9 @@ export const envSchema = z.object({
   SMTP_PASS: z.string(),
   SMTP_EMAIL_FROM: z.string().email(),
   SMTP_NAME: z.string().default('KichuKori'),
+  OAUTH_CLIENT_ID: z.string().optional(),
+  OAUTH_CLIENT_SECRET: z.string().optional(),
+  OAUTH_REDIRECT_URL: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

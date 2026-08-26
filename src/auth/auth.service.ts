@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -11,12 +12,13 @@ import bcrypt from 'bcryptjs';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
 import { EnvConfig } from '../config/env.schema';
-import { User } from '@prisma/client';
+import { User, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../modules/mail/mail.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
@@ -154,6 +156,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password!');
     }
 
+    if (!user.password) {
+      throw new UnauthorizedException(
+        'This account uses Google Login. Please sign in with Google.',
+      );
+    }
+
     const isMatch = await bcrypt.compare(payload.password, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid email or password!');
@@ -279,5 +287,82 @@ export class AuthService {
     return {
       message: 'Password reset successfully.',
     };
+  }
+
+  async authenticateGoogleToken(idToken: string, activeRole?: Role) {
+    const clientId = this.configService.get('OAUTH_CLIENT_ID', {
+      infer: true,
+    });
+    if (!clientId) {
+      throw new Error('Google Client ID is not configured');
+    }
+    const client = new OAuth2Client(clientId);
+
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: clientId,
+      });
+
+      payload = ticket.getPayload();
+      if (!payload) {
+        throw new UnauthorizedException('Invalid Google token payload');
+      }
+    } catch {
+      throw new UnauthorizedException('Invalid Google ID token');
+    }
+
+    const {
+      sub: googleId,
+      email,
+      given_name: firstName,
+      family_name: lastName,
+    } = payload;
+
+    if (!email) {
+      throw new UnauthorizedException('Email not provided by Google');
+    }
+
+    // Check if user exists by googleId first
+    let user = await this.prisma.user.findFirst({
+      where: { googleId },
+    });
+
+    // If not found, check by email (to link account if they registered with email previously)
+    if (!user) {
+      user = await this.usersRepository.findByEmail(email);
+
+      if (user) {
+        // Link Google ID to existing user and mark email as verified
+        user = await this.prisma.user.update({
+          where: { email },
+          data: {
+            googleId,
+            isEmailVerified: true,
+          },
+        });
+      } else {
+        // First time Google registration: activeRole is required
+        if (!activeRole) {
+          throw new BadRequestException(
+            'Active role is required for first-time registration via Google',
+          );
+        }
+
+        // Create new user without password
+        user = await this.usersRepository.create({
+          email,
+          googleId,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          isEmailVerified: true,
+          activeRole,
+          roles: [activeRole],
+        });
+      }
+    }
+
+    return this.generateTokens(user);
   }
 }
