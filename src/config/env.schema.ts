@@ -21,6 +21,11 @@ export const envSchema = z.object({
   OAUTH_CLIENT_ID: z.string().optional(),
   OAUTH_CLIENT_SECRET: z.string().optional(),
   OAUTH_REDIRECT_URL: z.string().optional(),
+  S3_ACCESS_KEY: z.string(),
+  S3_SECRET_KEY: z.string(),
+  S3_REGION: z.string(),
+  S3_BUCKET_NAME: z.string(),
+  S3_ENDPOINT: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateProfileDto {
   @ApiProperty({
@@ -21,19 +22,20 @@ export class UpdateProfileDto {
   lastName?: string;
 
   @ApiProperty({
-    description: 'Profile image URL or identifier string',
-    example: 'https://example.com/images/profile.jpg',
+    type: 'string',
+    format: 'binary',
+    description: 'Profile image file to upload',
     required: false,
   })
-  @IsString()
   @IsOptional()
-  profileImage?: string;
+  profileImage?: any;
 
   @ApiProperty({
     description: 'Latitude of the user location',
     example: 23.8103,
     required: false,
   })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   latitude?: number;
@@ -43,6 +45,7 @@ export class UpdateProfileDto {
     example: 90.4125,
     required: false,
   })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   longitude?: number;
