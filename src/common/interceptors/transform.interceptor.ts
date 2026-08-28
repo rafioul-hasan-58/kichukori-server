@@ -4,7 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { map, Observable } from 'rxjs';
 import { ApiResponse } from '../../shared/interfaces/api-response.interface';
 
@@ -17,10 +17,14 @@ export class TransformInterceptor<T> implements NestInterceptor<
     context: ExecutionContext,
     next: CallHandler<T>,
   ): Observable<ApiResponse<T>> {
+    const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();
 
     return next.handle().pipe(
       map((result: unknown) => {
+        if (request.path === '/') {
+          return result as ApiResponse<T>;
+        }
         const isObject = result !== null && typeof result === 'object';
         const resObj = isObject ? (result as Record<string, unknown>) : null;
 

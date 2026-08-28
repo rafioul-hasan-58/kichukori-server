@@ -19,7 +19,9 @@ async function bootstrap() {
     });
 
     app.use(cookieParser());
-    app.setGlobalPrefix(GLOBAL_PREFIX);
+    app.setGlobalPrefix(GLOBAL_PREFIX, {
+      exclude: ['/'],
+    });
 
     // Enable URI versioning (e.g. /api/v1/auth/login)
     app.enableVersioning({

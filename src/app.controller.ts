@@ -5,6 +5,8 @@ import {
   Body,
   NotFoundException,
   UseGuards,
+  Version,
+  VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import z from 'zod';
@@ -17,13 +19,10 @@ import { AuthGuard } from './common/guards/auth.guard';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Version(VERSION_NEUTRAL)
   @Get()
-  async getHello() {
-    const result = await this.appService.getHello();
-    return {
-      message: 'Fetched Successfully!',
-      data: result,
-    };
+  getHello(): string {
+    return 'Welcome to KichuKori Server';
   }
 
   @Get('test-error')
