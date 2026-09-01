@@ -22,6 +22,15 @@ export class UpdateProfileDto {
   lastName?: string;
 
   @ApiProperty({
+    description: 'Expertise type of the user',
+    example: 'Electrician',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  expertiseType?: string;
+
+  @ApiProperty({
     type: 'string',
     format: 'binary',
     description: 'Profile image file to upload',
