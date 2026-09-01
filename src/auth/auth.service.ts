@@ -16,6 +16,7 @@ import { User, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../modules/mail/mail.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
 import { OAuth2Client } from 'google-auth-library';
@@ -128,6 +129,44 @@ export class AuthService {
 
     // Return session tokens
     return this.generateTokens(user);
+  }
+
+  async resendOtp(payload: ResendOtpDto) {
+    const user = await this.usersRepository.findByEmail(payload.email);
+
+    if (!user) {
+      throw new NotFoundException('User with this email does not exist');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    // Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Save/upsert OTP
+    await this.prisma.otp.upsert({
+      where: { email: payload.email },
+      update: {
+        code: otpCode,
+        expiresAt,
+      },
+      create: {
+        email: payload.email,
+        code: otpCode,
+        expiresAt,
+      },
+    });
+
+    // Send styled email
+    await this.mailService.sendOtp(payload.email, otpCode);
+
+    return {
+      message: 'OTP verification code resent successfully.',
+      email: payload.email,
+    };
   }
 
   private async generateTokens(user: User) {
