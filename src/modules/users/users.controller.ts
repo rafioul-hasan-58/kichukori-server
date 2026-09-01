@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Patch,
@@ -54,6 +55,24 @@ export class UsersController {
     return {
       message: 'Profile updated successfully!',
       data: updatedUser,
+    };
+  }
+
+  @Get('profile')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get the profile of the current authenticated user',
+  })
+  @ApiResponse({ status: 200, description: 'Profile fetched successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async getProfile(@CurrentUser('id') userId: string) {
+    const user = await this.usersService.getProfile(userId);
+    return {
+      message: 'Profile fetched successfully!',
+      data: user,
     };
   }
 }
